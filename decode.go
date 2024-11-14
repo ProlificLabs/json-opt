@@ -85,14 +85,13 @@ import (
 //
 // The JSON null value unmarshals into an interface, map, pointer, or slice
 // by setting that Go value to nil. Because null is often used in JSON to mean
-// ``not present,'' unmarshaling a JSON null into any other Go type has no effect
+// “not present,” unmarshaling a JSON null into any other Go type has no effect
 // on the value and produces no error.
 //
 // When unmarshaling quoted strings, invalid UTF-8 or
 // invalid UTF-16 surrogate pairs are not treated as an error.
 // Instead, they are replaced by the Unicode replacement
 // character U+FFFD.
-//
 func Unmarshal(data []byte, v any) error {
 	// Check for well-formedness.
 	// Avoids filling out half a data structure
@@ -148,6 +147,19 @@ type UnmarshalFieldError struct {
 
 func (e *UnmarshalFieldError) Error() string {
 	return "json: cannot unmarshal object key " + strconv.Quote(e.Key) + " into unexported field " + e.Field.Name + " of type " + e.Type.String()
+}
+
+type UnmarshalErrorWrapper struct {
+	InnerError error
+	Struct     string
+	Field      string
+}
+
+func (e *UnmarshalErrorWrapper) Error() string {
+	if e.Struct != "" || e.Field != "" {
+		return "json: cannot unmarshal into Go struct field " + e.Struct + " at path " + e.Field + ": " + e.InnerError.Error()
+	}
+	return e.InnerError.Error()
 }
 
 // An InvalidUnmarshalError describes an invalid argument passed to Unmarshal.
@@ -255,6 +267,13 @@ func (d *decodeState) addErrorContext(err error) error {
 		case *UnmarshalTypeError:
 			err.Struct = d.errorContext.Struct.Name()
 			err.Field = strings.Join(d.errorContext.FieldStack, ".")
+		default:
+			errWrap := UnmarshalErrorWrapper{
+				InnerError: err,
+				Struct:     d.errorContext.Struct.Name(),
+				Field:      strings.Join(d.errorContext.FieldStack, "."),
+			}
+			return &errWrap
 		}
 	}
 	return err
@@ -609,7 +628,10 @@ func (d *decodeState) object(v reflect.Value) error {
 	if u != nil {
 		start := d.readIndex()
 		d.skip()
-		return u.UnmarshalJSON(d.data[start:d.off])
+		err := u.UnmarshalJSON(d.data[start:d.off])
+		if err != nil {
+			return err
+		}
 	}
 	if ut != nil {
 		d.saveError(&UnmarshalTypeError{Value: "object", Type: v.Type(), Offset: int64(d.off)})

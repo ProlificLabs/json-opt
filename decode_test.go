@@ -18,6 +18,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aarondl/opt/omit"
 )
 
 type T struct {
@@ -2570,5 +2572,40 @@ func TestUnmarshalMaxDepth(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestUnmarshalIncorrectFieldValues(t *testing.T) {
+	type Person struct {
+		Name *string
+	}
+
+	type Employee struct {
+		Person Person
+		Salary int
+	}
+
+	t1 := Employee{Person: Person{Name: nil}}
+
+	b, err := Marshal(t1)
+	if err != nil {
+		t.Fatalf("Marshal unexpected error: %v", err)
+	}
+
+	type PersonOmit struct {
+		Name omit.Val[string]
+	}
+
+	type EmployeeOmit struct {
+		Person PersonOmit
+		Salary int
+	}
+	var t2 EmployeeOmit
+	err = Unmarshal(b, &t2)
+	if err == nil {
+		t.Fatalf("Unmarshal expected error")
+	}
+	if !strings.Contains(err.Error(), "cannot unmarshal into Go struct field PersonOmit at path Person.Name: cannot unmarshal 'null' value into omit value") {
+		t.Fatalf("Unmarshal wrong error: %v", err)
 	}
 }
