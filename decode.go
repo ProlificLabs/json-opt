@@ -628,10 +628,7 @@ func (d *decodeState) object(v reflect.Value) error {
 	if u != nil {
 		start := d.readIndex()
 		d.skip()
-		err := u.UnmarshalJSON(d.data[start:d.off])
-		if err != nil {
-			return err
-		}
+		return u.UnmarshalJSON(d.data[start:d.off])
 	}
 	if ut != nil {
 		d.saveError(&UnmarshalTypeError{Value: "object", Type: v.Type(), Offset: int64(d.off)})

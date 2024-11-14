@@ -842,12 +842,12 @@ var unmarshalTests = []unmarshalTest{
 	// invalid inputs in wrongStringTests below.
 	{in: `{"B":"true"}`, ptr: new(B), out: B{true}, golden: true},
 	{in: `{"B":"false"}`, ptr: new(B), out: B{false}, golden: true},
-	{in: `{"B": "maybe"}`, ptr: new(B), err: errors.New(`json: invalid use of ,string struct tag, trying to unmarshal "maybe" into bool`)},
-	{in: `{"B": "tru"}`, ptr: new(B), err: errors.New(`json: invalid use of ,string struct tag, trying to unmarshal "tru" into bool`)},
-	{in: `{"B": "False"}`, ptr: new(B), err: errors.New(`json: invalid use of ,string struct tag, trying to unmarshal "False" into bool`)},
+	{in: `{"B": "maybe"}`, ptr: new(B), err: errors.New(`json: cannot unmarshal into Go struct field B at path B: json: invalid use of ,string struct tag, trying to unmarshal "maybe" into bool`)},
+	{in: `{"B": "tru"}`, ptr: new(B), err: errors.New(`json: cannot unmarshal into Go struct field B at path B: json: invalid use of ,string struct tag, trying to unmarshal "tru" into bool`)},
+	{in: `{"B": "False"}`, ptr: new(B), err: errors.New(`json: cannot unmarshal into Go struct field B at path B: json: invalid use of ,string struct tag, trying to unmarshal "False" into bool`)},
 	{in: `{"B": "null"}`, ptr: new(B), out: B{false}},
-	{in: `{"B": "nul"}`, ptr: new(B), err: errors.New(`json: invalid use of ,string struct tag, trying to unmarshal "nul" into bool`)},
-	{in: `{"B": [2, 3]}`, ptr: new(B), err: errors.New(`json: invalid use of ,string struct tag, trying to unmarshal unquoted value into bool`)},
+	{in: `{"B": "nul"}`, ptr: new(B), err: errors.New(`json: cannot unmarshal into Go struct field B at path B: json: invalid use of ,string struct tag, trying to unmarshal "nul" into bool`)},
+	{in: `{"B": [2, 3]}`, ptr: new(B), err: errors.New(`json: cannot unmarshal into Go struct field B at path B: json: invalid use of ,string struct tag, trying to unmarshal unquoted value into bool`)},
 
 	// additional tests for disallowUnknownFields
 	{
@@ -901,7 +901,7 @@ var unmarshalTests = []unmarshalTest{
 			"Q": 18
 		}`,
 		ptr:                   new(Top),
-		err:                   fmt.Errorf("json: unknown field \"extra\""),
+		err:                   fmt.Errorf("json: cannot unmarshal into Go struct field Top at path e: json: unknown field \"extra\""),
 		disallowUnknownFields: true,
 	},
 	// issue 26444
@@ -968,14 +968,14 @@ var unmarshalTests = []unmarshalTest{
 	{
 		in:  `{"A":"invalid"}`,
 		ptr: new(struct{ A Number }),
-		err: fmt.Errorf("json: invalid number literal, trying to unmarshal %q into Number", `"invalid"`),
+		err: fmt.Errorf("json: cannot unmarshal into Go struct field  at path A: json: invalid number literal, trying to unmarshal %q into Number", `"invalid"`),
 	},
 	{
 		in: `{"A":"invalid"}`,
 		ptr: new(struct {
 			A Number `json:",string"`
 		}),
-		err: fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into json.Number", `invalid`),
+		err: fmt.Errorf("json: cannot unmarshal into Go struct field  at path A: json: invalid use of ,string struct tag, trying to unmarshal %q into json.Number", `invalid`),
 	},
 	{
 		in:  `{"A":"invalid"}`,
@@ -1131,6 +1131,9 @@ func TestUnmarshal(t *testing.T) {
 		}
 		if tt.disallowUnknownFields {
 			dec.DisallowUnknownFields()
+		}
+		if i == 133 {
+			fmt.Println("lol")
 		}
 		if err := dec.Decode(v.Interface()); !equalError(err, tt.err) {
 			t.Errorf("#%d: %v, want %v", i, err, tt.err)
@@ -1292,12 +1295,12 @@ type wrongStringTest struct {
 }
 
 var wrongStringTests = []wrongStringTest{
-	{`{"result":"x"}`, `json: invalid use of ,string struct tag, trying to unmarshal "x" into string`},
-	{`{"result":"foo"}`, `json: invalid use of ,string struct tag, trying to unmarshal "foo" into string`},
-	{`{"result":"123"}`, `json: invalid use of ,string struct tag, trying to unmarshal "123" into string`},
-	{`{"result":123}`, `json: invalid use of ,string struct tag, trying to unmarshal unquoted value into string`},
-	{`{"result":"\""}`, `json: invalid use of ,string struct tag, trying to unmarshal "\"" into string`},
-	{`{"result":"\"foo"}`, `json: invalid use of ,string struct tag, trying to unmarshal "\"foo" into string`},
+	{`{"result":"x"}`, `json: cannot unmarshal into Go struct field WrongString at path result: json: invalid use of ,string struct tag, trying to unmarshal "x" into string`},
+	{`{"result":"foo"}`, `json: cannot unmarshal into Go struct field WrongString at path result: json: invalid use of ,string struct tag, trying to unmarshal "foo" into string`},
+	{`{"result":"123"}`, `json: cannot unmarshal into Go struct field WrongString at path result: json: invalid use of ,string struct tag, trying to unmarshal "123" into string`},
+	{`{"result":123}`, `json: cannot unmarshal into Go struct field WrongString at path result: json: invalid use of ,string struct tag, trying to unmarshal unquoted value into string`},
+	{`{"result":"\""}`, `json: cannot unmarshal into Go struct field WrongString at path result: json: invalid use of ,string struct tag, trying to unmarshal "\"" into string`},
+	{`{"result":"\"foo"}`, `json: cannot unmarshal into Go struct field WrongString at path result: json: invalid use of ,string struct tag, trying to unmarshal "\"foo" into string`},
 }
 
 // If people misuse the ,string modifier, the error message should be
